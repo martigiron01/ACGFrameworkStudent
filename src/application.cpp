@@ -31,7 +31,7 @@ void Application::init(GLFWwindow* window)
     */
 
     SceneNode* volume_node = new SceneNode("Volume Node");
-    volume_node->mesh = Mesh::Get("res/meshes/sphere.obj");
+    volume_node->mesh = Mesh::Get("res/meshes/cube.obj");
     volume_node->material = new VolumeMaterial();
     this->node_list.push_back(volume_node);
 }

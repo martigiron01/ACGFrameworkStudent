@@ -3,3 +3,4 @@ build/*
 .vscode/*
 res/volumes*
 imgui.ini
+libraries/*
