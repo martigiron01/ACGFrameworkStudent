@@ -184,6 +184,9 @@ void VolumeMaterial::setUniforms(Camera* camera, glm::mat4 model)
 
     // Extra uniform for absorption
     this->shader->setUniform("u_absorption_coefficient", this->absorption_coefficient);
+
+	// Background color uniform
+	this->shader->setUniform("u_background_color", Application::instance->background_color);
 }
 
 void VolumeMaterial::renderInMenu()

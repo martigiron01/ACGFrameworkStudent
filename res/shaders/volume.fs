@@ -11,10 +11,11 @@ uniform vec3 u_camera_position;
 uniform vec4 u_color;
 uniform float u_absorption_coefficient;
 uniform mat4 u_model;
+uniform vec4 u_background_color;
 
 uniform vec3 u_box_min = vec3(-0.5);
 uniform vec3 u_box_max = vec3(0.5);
-uniform vec3 u_background_color = vec3(0.1, 0.1, 0.1);
+
 
 vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
 {
@@ -55,7 +56,7 @@ void main()
 
     // Final color
     vec3 baseColor = u_color.rgb;
-    vec3 background = u_background_color;
+    vec3 background = u_background_color.rgb;
     vec3 finalColor = mix(baseColor, background, transmittance);
 
     FragColor = vec4(finalColor, u_color.a);
