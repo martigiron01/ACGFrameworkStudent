@@ -57,3 +57,15 @@ public:
 	void render(Mesh* mesh, glm::mat4 model, Camera* camera);
 	void renderInMenu();
 };
+
+class VolumeMaterial : public FlatMaterial {
+public:
+
+    float absorption_coefficient;
+
+    VolumeMaterial(glm::vec4 color = glm::vec4(1.f), float absorption_coefficient = 0.1f);
+    ~VolumeMaterial();
+
+    void setUniforms(Camera* camera, glm::mat4 model) override;
+    void renderInMenu() override;
+};

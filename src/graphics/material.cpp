@@ -161,3 +161,34 @@ void StandardMaterial::renderInMenu()
 
 	if (!this->show_normals) ImGui::ColorEdit3("Color", (float*)&this->color);
 }
+
+VolumeMaterial::VolumeMaterial(glm::vec4 color, float absorption)
+{
+    this->color = color;
+    this->absorption_coefficient = absorption;
+
+    // We use a specific shader for volume rendering
+    this->shader = Shader::Get("res/shaders/basic.vs", "res/shaders/volume.fs");
+}
+
+VolumeMaterial::~VolumeMaterial() { }
+
+void VolumeMaterial::setUniforms(Camera* camera, glm::mat4 model)
+{
+    // Base class uniforms
+    this->shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+    this->shader->setUniform("u_camera_position", camera->eye);
+    this->shader->setUniform("u_model", model);
+
+    this->shader->setUniform("u_color", this->color);
+
+    // Extra uniform for absorption
+    this->shader->setUniform("u_absorption_coefficient", this->absorption_coefficient);
+}
+
+void VolumeMaterial::renderInMenu()
+{
+    ImGui::Text("Material Type: %s", std::string("Volume").c_str());
+    ImGui::ColorEdit3("Color", (float*)&this->color);
+    ImGui::SliderFloat("Absorption Coefficient", &this->absorption_coefficient, 0.0f, 1.0f);
+}
