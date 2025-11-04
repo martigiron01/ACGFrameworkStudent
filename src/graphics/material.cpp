@@ -205,9 +205,6 @@ void VolumeMaterial::setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model)
 	// Noise properties for heterogeneous volumes
 	this->shader->setUniform("noise_scale", this->noise_scale);
 	this->shader->setUniform("noise_amplitude", this->noise_amplitude);
-
-	// Emission properties
-	this->shader->setUniform("u_emission_color", this->emission_color);
 }
 
 void VolumeMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
@@ -228,11 +225,17 @@ void VolumeMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
 
 void VolumeMaterial::renderInMenu()
 {
-    ImGui::Combo("Shader Type", &this->shader_type, "Absorption Only\0Absorption + Emission\0");
-	ImGui::ColorEdit3("Emission Color", (float*)&this->emission_color);
-    ImGui::ColorEdit3("Color", (float*)&this->color);
+	if (ImGui::Combo("Shader Type", &this->shader_type, "Absorption Only\0Absorption + Emission\0")) {
+		if (this->shader_type == 0) {
+			this->shader = Shader::Get("res/shaders/basic.vs", "res/shaders/volume.fs");
+		}
+		else {
+			this->shader = Shader::Get("res/shaders/basic.vs", "res/shaders/volume_emission.fs");
+		}
+	}
+	ImGui::ColorEdit4("Color", (float*)&this->color);
 	ImGui::SliderFloat("Step Length", &this->step_length, 0.001f, 0.500f);
-    ImGui::SliderFloat("Absorption Coefficient", &this->absorption_coefficient, 0.0f, 1.0f);
+	ImGui::SliderFloat("Absorption Coefficient", &this->absorption_coefficient, 0.0f, 1.0f);
 	ImGui::Combo("Volume Type", &this->volume_type, "Homogeneous\0Heterogeneous\0");
 	ImGui::SliderFloat("Noise Scale", &this->noise_scale, 0.0f, 10.0f);
 	ImGui::SliderFloat("Noise Amplitude", &this->noise_amplitude, 0.0f, 1.0f);

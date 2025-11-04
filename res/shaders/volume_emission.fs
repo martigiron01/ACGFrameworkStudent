@@ -19,7 +19,6 @@ uniform float noise_scale;
 uniform float noise_amplitude;
 uniform vec3 u_box_min;
 uniform vec3 u_box_max;
-uniform vec3 u_emission_color;
 
 
 vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
@@ -187,7 +186,7 @@ void main()
             float transmittance = exp(- thickness);
 
             // Emission contribution
-            vec3 Le = u_emission_color; 
+            vec3 Le = u_color.rgb;
             L += absorption_coefficient * Le * transmittance * dt;
             
             t += dt;

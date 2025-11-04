@@ -67,7 +67,6 @@ public:
 	float step_length = 0.004f;
 	float noise_scale = 3.0f;
 	float noise_amplitude = 0.5f;
-	glm::vec3 emission_color = glm::vec3(1.0f);
 
     VolumeMaterial(glm::vec4 color = glm::vec4(1.f), float absorption_coefficient = 0.5f, int volume_type = 0);
     ~VolumeMaterial();
