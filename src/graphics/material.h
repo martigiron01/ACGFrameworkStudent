@@ -64,7 +64,8 @@ public:
     float absorption_coefficient;
 	int volume_type = 0; // 0: homogeneous, 1: heterogeneous
 	float step_length = 0.004f;
-	int num_steps = 16;
+	float noise_scale = 3.0f;
+	float noise_amplitude = 0.5f;
 
     VolumeMaterial(glm::vec4 color = glm::vec4(1.f), float absorption_coefficient = 0.5f, int volume_type = 0);
     ~VolumeMaterial();

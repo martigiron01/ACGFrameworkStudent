@@ -15,7 +15,8 @@ uniform mat4 u_model;
 uniform vec4 u_background_color;
 uniform int u_num_steps;
 uniform float u_step_length;
-
+uniform float noise_scale;
+uniform float noise_amplitude;
 uniform vec3 u_box_min;
 uniform vec3 u_box_max;
 
@@ -109,7 +110,8 @@ float snoise(vec3 v){
 
 float getAbsorption(vec3 point)
 {
-    float noise = snoise(point);
+    float noise = snoise(point * noise_scale);
+    noise *= noise_amplitude;
     return max(0.0, noise);
 }
 
@@ -165,9 +167,9 @@ void main()
         if (tExit < 0.0 || tEntry > tExit)
             discard;
 
-
-        int N = max(u_num_steps, 1);
-        float dt = (tExit - tEntry) / float(N);
+        // Sampling parameters
+        float dt = u_step_length;
+        int N = int((tExit - tEntry) / dt);
 
         float t = tEntry + 0.5 * dt;
 
@@ -176,7 +178,7 @@ void main()
 
         for (int i = 0; i < N; ++i)
         {
-            vec3 point = rayOriginLoc + t * rayDirLoc;
+            vec3 point = rayOriginLoc + t * rayDirLoc; 
             float absorption_coefficient = getAbsorption(point);
 
             thickness += absorption_coefficient * dt;
