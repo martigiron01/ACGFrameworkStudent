@@ -22,7 +22,7 @@ void Application::init(GLFWwindow* window)
 
     this->ambient_light = glm::vec4(0.75f, 0.75f, 0.75f, 1.f);
 
-    this->background_color = glm::vec4(0.1f, 0.1f, 0.1f, 1.f);
+    this->background_color = glm::vec4(0.9f, 0.9f, 0.9f, 1.f);
 
     /* ADD NODES TO THE SCENE */
     /*

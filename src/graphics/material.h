@@ -62,10 +62,14 @@ class VolumeMaterial : public FlatMaterial {
 public:
 
     float absorption_coefficient;
+	int volume_type = 0; // 0: homogeneous, 1: heterogeneous
+	float step_length = 0.004f;
+	int num_steps = 16;
 
-    VolumeMaterial(glm::vec4 color = glm::vec4(1.f), float absorption_coefficient = 0.1f);
+    VolumeMaterial(glm::vec4 color = glm::vec4(1.f), float absorption_coefficient = 0.5f, int volume_type = 0);
     ~VolumeMaterial();
 
-    void setUniforms(Camera* camera, glm::mat4 model) override;
+	void render(Mesh* mesh, glm::mat4 model, Camera* camera) override;
+    void setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model);
     void renderInMenu() override;
 };

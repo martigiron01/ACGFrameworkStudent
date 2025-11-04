@@ -7,14 +7,12 @@ in vec2 v_uv;
 
 out vec4 FragColor;
 
-uniform int u_volume_type = 0; // 0: homogeneous, 1: heterogeneous
 uniform vec3 u_camera_position;
 uniform vec4 u_color;
 uniform float u_absorption_coefficient;
 uniform mat4 u_model;
 uniform vec4 u_background_color;
-uniform int u_num_steps;
-uniform float u_step_length;
+uniform int u_num_steps = 16;
 
 uniform vec3 u_box_min;
 uniform vec3 u_box_max;
@@ -31,7 +29,7 @@ vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
     return vec2(tNear, tFar);
 }
 
-    //	Simplex 3D Noise 
+//	Simplex 3D Noise 
 //	by Ian McEwan, Stefan Gustavson (https://github.com/stegu/webgl-noise)
 //
 vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
@@ -115,81 +113,48 @@ float getAbsorption(vec3 point)
 
 void main()
 {
-    if (u_volume_type == 0) {
-        
-        // Initialize ray in world space
-        vec3 rayOrigin = u_camera_position;
-        vec3 rayDir = normalize(v_world_position - u_camera_position);
+    // Initialize ray in world space
+    vec3 rayOrigin = u_camera_position;
+    vec3 rayDir = normalize(v_world_position - u_camera_position);
 
-        // Transform ray into local space
-        mat4 invModel = inverse(u_model);
-        vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
-        vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
+    // Transform ray into local space
+    mat4 invModel = inverse(u_model);
+    vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
+    vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
 
-        // Compute intersection with box in local space
-        vec2 intersection = intersectAABB(rayOriginLoc, rayDirLoc, u_box_min, u_box_max);
-        float tEntry = intersection.x;
-        float tExit = intersection.y;
+    // Compute intersection with box in local space
+    vec2 intersection = intersectAABB(rayOriginLoc, rayDirLoc, u_box_min, u_box_max);
+    float tEntry = intersection.x;
+    float tExit = intersection.y;
 
-        // If no intersection, discard fragment
-        if (tExit < 0.0 || tEntry > tExit)
-            discard;
+    // If no intersection, discard fragment
+    if (tExit < 0.0 || tEntry > tExit)
+        discard;
 
-        // Optical thickness
-        float thickness = max(0.0, tExit - tEntry);
-        // Transmittance
-        float transmittance = exp(- thickness * u_absorption_coefficient);
 
-        // Final color
-        vec3 background = u_background_color.rgb;
-        vec3 finalColor = background * transmittance;
+    int N = max(u_num_steps, 1);
+    float dt = (tExit - tEntry) / float(N);
 
-        FragColor = vec4(finalColor, u_color.a);
+    float t = tEntry + 0.5 * dt;
+
+    // Optical thickness
+    float thickness = 0.0;
+
+    for (int i = 0; i < N; ++i)
+    {
+        vec3 point = rayOriginLoc + t * rayDirLoc;
+        float absorption_coefficient = getAbsorption(point);
+
+        thickness += absorption_coefficient * dt;
+        t += dt;
     }
-        else if (u_volume_type == 1) {
-        // Initialize ray in world space
-        vec3 rayOrigin = u_camera_position;
-        vec3 rayDir = normalize(v_world_position - u_camera_position);
 
-        // Transform ray into local space
-        mat4 invModel = inverse(u_model);
-        vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
-        vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
+    float transmittance = exp(- thickness);
 
-        // Compute intersection with box in local space
-        vec2 intersection = intersectAABB(rayOriginLoc, rayDirLoc, u_box_min, u_box_max);
-        float tEntry = intersection.x;
-        float tExit = intersection.y;
+    // Final color
+    vec3 background = u_background_color.rgb;
 
-        // If no intersection, discard fragment
-        if (tExit < 0.0 || tEntry > tExit)
-            discard;
+    vec3 finalColor = background * transmittance;
 
-
-        int N = max(u_num_steps, 1);
-        float dt = (tExit - tEntry) / float(N);
-
-        float t = tEntry + 0.5 * dt;
-
-        // Optical thickness
-        float thickness = 0.0;
-
-        for (int i = 0; i < N; ++i)
-        {
-            vec3 point = rayOriginLoc + t * rayDirLoc;
-            float absorption_coefficient = getAbsorption(point);
-
-            thickness += absorption_coefficient * dt;
-            t += dt;
-        }
-
-        float transmittance = exp(- thickness);
-
-        // Final color
-        vec3 background = u_background_color.rgb;
-
-        vec3 finalColor = background * transmittance;
-
-        FragColor = vec4(finalColor, u_color.a);
-    }
+    FragColor = vec4(finalColor, u_color.a);
 }
