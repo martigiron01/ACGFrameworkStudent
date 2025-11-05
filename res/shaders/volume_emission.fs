@@ -144,7 +144,8 @@ void main()
 
         // Final color
         vec3 background = u_background_color.rgb;
-        vec3 finalColor = background * transmittance;
+        vec3 emission = u_color.rgb;
+        vec3 finalColor = background * transmittance + emission * (1.0 - transmittance);
 
         FragColor = vec4(finalColor, u_color.a);
     }

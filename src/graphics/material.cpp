@@ -238,5 +238,5 @@ void VolumeMaterial::renderInMenu()
 	ImGui::SliderFloat("Absorption Coefficient", &this->absorption_coefficient, 0.0f, 1.0f);
 	ImGui::Combo("Volume Type", &this->volume_type, "Homogeneous\0Heterogeneous\0");
 	ImGui::SliderFloat("Noise Scale", &this->noise_scale, 0.0f, 10.0f);
-	ImGui::SliderFloat("Noise Amplitude", &this->noise_amplitude, 0.0f, 1.0f);
+	ImGui::SliderFloat("Noise Amplitude", &this->noise_amplitude, 0.0f, 5.0f);
 }

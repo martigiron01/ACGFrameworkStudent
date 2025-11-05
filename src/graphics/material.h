@@ -68,7 +68,7 @@ public:
 	float noise_scale = 3.0f;
 	float noise_amplitude = 0.5f;
 
-    VolumeMaterial(glm::vec4 color = glm::vec4(1.f), float absorption_coefficient = 0.5f, int volume_type = 0);
+    VolumeMaterial(glm::vec4 color = glm::vec4(0.f), float absorption_coefficient = 0.5f, int volume_type = 0);
     ~VolumeMaterial();
 
 	void render(Mesh* mesh, glm::mat4 model, Camera* camera) override;
