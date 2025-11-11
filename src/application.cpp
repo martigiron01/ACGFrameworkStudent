@@ -32,10 +32,24 @@ void Application::init(GLFWwindow* window)
     this->node_list.push_back(example);
     */
 
+    /*
     SceneNode* volume_node = new SceneNode("Volume Node");
     volume_node->mesh = Mesh::Get("res/meshes/cube.obj");
     volume_node->material = new VolumeMaterial();
     this->node_list.push_back(volume_node);
+    */
+
+    SceneNode* bunny = new SceneNode("Bunny");
+    VolumeMaterial* bunnyMaterial = new VolumeMaterial();
+    bunnyMaterial->loadVDB("res/volumes/bunny_cloud.vdb");
+    bunny->material = bunnyMaterial;
+    bunny->mesh = Mesh::Get("res/meshes/cube.obj");
+    this->node_list.push_back(bunny);
+
+
+    Light* light = new Light();
+    light_list.push_back(light);
+    node_list.push_back(light);
 }
 
 void Application::update(float dt)

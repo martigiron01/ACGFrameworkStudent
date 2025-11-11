@@ -16,9 +16,12 @@ uniform vec4 u_background_color;
 uniform int u_num_steps;
 uniform float u_step_length;
 uniform float noise_scale;
-uniform float noise_amplitude;
 uniform vec3 u_box_min;
 uniform vec3 u_box_max;
+
+uniform vec3 u_light_position;
+uniform vec4 u_light_color;
+uniform float u_light_intensity;
 
 
 vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
@@ -111,7 +114,7 @@ float snoise(vec3 v){
 float getAbsorption(vec3 point)
 {
     float noise = snoise(point * noise_scale);
-    noise *= noise_amplitude;
+    noise *= u_absorption_coefficient;
     return max(0.0, noise);
 }
 

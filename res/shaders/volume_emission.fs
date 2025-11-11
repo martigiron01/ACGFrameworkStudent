@@ -16,10 +16,16 @@ uniform vec4 u_background_color;
 uniform int u_num_steps;
 uniform float u_step_length;
 uniform float noise_scale;
-uniform float noise_amplitude;
 uniform vec3 u_box_min;
 uniform vec3 u_box_max;
 
+uniform vec3 u_light_position;
+uniform vec4 u_light_color;
+uniform float u_light_intensity;
+
+uniform sampler3D u_texture;
+
+//vec3 texturePoint = texture(u_texture, vec3(0.5, 0.5, 0.5)).xyz;
 
 vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
 {
@@ -111,7 +117,7 @@ float snoise(vec3 v){
 float getAbsorption(vec3 point)
 {
     float noise = snoise(point * noise_scale);
-    noise *= noise_amplitude;
+    noise *= u_absorption_coefficient;
     return max(0.0, noise);
 }
 
@@ -149,7 +155,7 @@ void main()
 
         FragColor = vec4(finalColor, u_color.a);
     }
-        else if (u_volume_type == 1) {
+      else if (u_volume_type == 1) {
         // Initialize ray in world space
         vec3 rayOrigin = u_camera_position;
         vec3 rayDir = normalize(v_world_position - u_camera_position);
@@ -182,6 +188,60 @@ void main()
         {
             vec3 point = rayOriginLoc + t * rayDirLoc; 
             float absorption_coefficient = getAbsorption(point);
+
+            thickness += absorption_coefficient * dt;
+            float transmittance = exp(- thickness);
+
+            // Emission contribution
+            vec3 Le = u_color.rgb;
+            L += absorption_coefficient * Le * transmittance * dt;
+            
+            t += dt;
+        }     
+
+        // Final color
+        float transmittance_background = exp(- thickness);
+        vec3 background = u_background_color.rgb;
+
+        vec3 finalColor = L + background * transmittance_background;
+
+        FragColor = vec4(finalColor, u_color.a);
+    } else if (u_volume_type == 2) {
+        // VDB-based volume rendering
+
+        // Initialize ray in world space
+        vec3 rayOrigin = u_camera_position;
+        vec3 rayDir = normalize(v_world_position - u_camera_position);
+
+        // Transform ray into local space
+        mat4 invModel = inverse(u_model);
+        vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
+        vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
+
+        // Compute intersection with box in local space
+        vec2 intersection = intersectAABB(rayOriginLoc, rayDirLoc, u_box_min, u_box_max);
+        float tEntry = intersection.x;
+        float tExit = intersection.y;
+
+        // If no intersection, discard fragment
+        if (tExit < 0.0 || tEntry > tExit)
+            discard;
+
+        // Sampling parameters
+        float dt = u_step_length;
+        int N = int((tExit - tEntry) / dt);
+
+        float t = tEntry + 0.5 * dt;
+
+        // Optical thickness
+        float thickness = 0.0;
+        vec3 L = vec3(0.0); 
+
+        for (int i = 0; i < N; ++i)
+        {
+            vec3 point = rayOriginLoc + t * rayDirLoc; 
+            vec3 pointTex = (point + 1.0) / 2.0;
+            float absorption_coefficient = texture(u_texture, pointTex).r;
 
             thickness += absorption_coefficient * dt;
             float transmittance = exp(- thickness);

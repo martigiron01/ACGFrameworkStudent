@@ -204,7 +204,11 @@ void VolumeMaterial::setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model)
 
 	// Noise properties for heterogeneous volumes
 	this->shader->setUniform("noise_scale", this->noise_scale);
-	this->shader->setUniform("noise_amplitude", this->noise_amplitude);
+
+	Light* light = Application::instance->light_list[0];
+	this->shader->setUniform("u_light_intensity", light->intensity);
+
+	this->shader->setUniform("u_texture", this->texture);
 }
 
 void VolumeMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
@@ -236,7 +240,130 @@ void VolumeMaterial::renderInMenu()
 	ImGui::ColorEdit4("Color", (float*)&this->color);
 	ImGui::SliderFloat("Step Length", &this->step_length, 0.001f, 0.500f);
 	ImGui::SliderFloat("Absorption Coefficient", &this->absorption_coefficient, 0.0f, 1.0f);
-	ImGui::Combo("Volume Type", &this->volume_type, "Homogeneous\0Heterogeneous\0");
+	ImGui::Combo("Volume Type", &this->volume_type, "Homogeneous\0Heterogeneous\0VDB-based\0");
 	ImGui::SliderFloat("Noise Scale", &this->noise_scale, 0.0f, 10.0f);
-	ImGui::SliderFloat("Noise Amplitude", &this->noise_amplitude, 0.0f, 5.0f);
+}
+
+void VolumeMaterial::loadVDB(std::string file_path)
+{
+	easyVDB::OpenVDBReader* vdbReader = new easyVDB::OpenVDBReader();
+	vdbReader->read(file_path);
+
+	// now, read the grid from the vdbReader and store the data in a 3D texture
+	estimate3DTexture(vdbReader);
+}
+
+void VolumeMaterial::estimate3DTexture(easyVDB::OpenVDBReader* vdbReader)
+{
+	int resolution = 128;
+	float radius = 2.0;
+
+	int convertedGrids = 0;
+	int convertedVoxels = 0;
+
+	int totalGrids = vdbReader->gridsSize;
+	int totalVoxels = totalGrids * pow(resolution, 3);
+
+	float resolutionInv = 1.0f / resolution;
+	int resolutionPow2 = pow(resolution, 2);
+	int resolutionPow3 = pow(resolution, 3);
+
+	// read all grids data and convert to texture
+	for (unsigned int i = 0; i < totalGrids; i++) {
+		easyVDB::Grid& grid = vdbReader->grids[i];
+		float* data = new float[resolutionPow3];
+		memset(data, 0, sizeof(float) * resolutionPow3);
+
+		// Bbox
+		easyVDB::Bbox bbox = easyVDB::Bbox();
+		bbox = grid.getPreciseWorldBbox();
+		glm::vec3 target = bbox.getCenter();
+		glm::vec3 size = bbox.getSize();
+		glm::vec3 step = size * resolutionInv;
+
+		grid.transform->applyInverseTransformMap(step);
+		target = target - (size * 0.5f);
+		grid.transform->applyInverseTransformMap(target);
+		target = target + (step * 0.5f);
+
+		int x = 0;
+		int y = 0;
+		int z = 0;
+
+		for (unsigned int j = 0; j < resolutionPow3; j++) {
+			int baseX = x;
+			int baseY = y;
+			int baseZ = z;
+			int baseIndex = baseX + baseY * resolution + baseZ * resolutionPow2;
+
+			if (target.x >= 40 && target.y >= 40.33 && target.z >= 10.36) {
+				int a = 0;
+			}
+
+			float value = grid.getValue(target);
+
+			int cellBleed = radius;
+
+			if (cellBleed) {
+				for (int sx = -cellBleed; sx < cellBleed; sx++) {
+					for (int sy = -cellBleed; sy < cellBleed; sy++) {
+						for (int sz = -cellBleed; sz < cellBleed; sz++) {
+							if (x + sx < 0.0 || x + sx >= resolution ||
+								y + sy < 0.0 || y + sy >= resolution ||
+								z + sz < 0.0 || z + sz >= resolution) {
+								continue;
+							}
+
+							int targetIndex = baseIndex + sx + sy * resolution + sz * resolutionPow2;
+
+							float offset = std::max(0.0, std::min(1.0, 1.0 - std::hypot(sx, sy, sz) / (radius / 2.0)));
+							float dataValue = offset * value * 255.f;
+
+							data[targetIndex] += dataValue;
+							data[targetIndex] = std::min((float)data[targetIndex], 255.f);
+						}
+					}
+				}
+			}
+			else {
+				float dataValue = value * 255.f;
+
+				data[baseIndex] += dataValue;
+				data[baseIndex] = std::min((float)data[baseIndex], 255.f);
+			}
+
+			convertedVoxels++;
+
+			if (z >= resolution) {
+				break;
+			}
+
+			x++;
+			target.x += step.x;
+
+			if (x >= resolution) {
+				x = 0;
+				target.x -= step.x * resolution;
+
+				y++;
+				target.y += step.y;
+			}
+
+			if (y >= resolution) {
+				y = 0;
+				target.y -= step.y * resolution;
+
+				z++;
+				target.z += step.z;
+			}
+
+			// yield
+		}
+
+		// now we create the texture with the data
+		// use this: https://www.khronos.org/opengl/wiki/OpenGL_Type
+		// and this: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glTexImage3D.xhtml
+		this->texture = new Texture();
+		this->texture->create3D(resolution, resolution, resolution, GL_RED, GL_FLOAT, false, data, GL_R8);
+    }
 }
