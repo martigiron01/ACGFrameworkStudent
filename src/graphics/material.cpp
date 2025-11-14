@@ -208,12 +208,18 @@ void VolumeMaterial::setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model)
 	Light* light = Application::instance->light_list[0];
 	this->shader->setUniform("u_light_intensity", light->intensity);
 
-	this->shader->setUniform("u_texture", this->texture);
+	// Set texture only if it exists
+	if (this->texture) {
+		this->shader->setUniform("u_texture", this->texture, 0);
+	}
 }
 
 void VolumeMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
 {
 	if (mesh && this->shader) {
+		
+        //glDepthMask(GL_FALSE);
+
 		// Enable shader
 		this->shader->enable();
 
@@ -224,6 +230,8 @@ void VolumeMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
 		mesh->render(GL_TRIANGLES);
 
 		this->shader->disable();
+
+		//glDepthMask(GL_TRUE);
 	}
 }
 
@@ -239,7 +247,7 @@ void VolumeMaterial::renderInMenu()
 	}
 	ImGui::ColorEdit4("Color", (float*)&this->color);
 	ImGui::SliderFloat("Step Length", &this->step_length, 0.001f, 0.500f);
-	ImGui::SliderFloat("Absorption Coefficient", &this->absorption_coefficient, 0.0f, 1.0f);
+	ImGui::SliderFloat("Absorption Coefficient", &this->absorption_coefficient, 0.0f, 10.0f);
 	ImGui::Combo("Volume Type", &this->volume_type, "Homogeneous\0Heterogeneous\0VDB-based\0");
 	ImGui::SliderFloat("Noise Scale", &this->noise_scale, 0.0f, 10.0f);
 }

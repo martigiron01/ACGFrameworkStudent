@@ -240,8 +240,16 @@ void main()
         for (int i = 0; i < N; ++i)
         {
             vec3 point = rayOriginLoc + t * rayDirLoc; 
-            vec3 pointTex = (point + 1.0) / 2.0;
-            float absorption_coefficient = texture(u_texture, pointTex).r;
+            
+            // Map from bounding box local space to texture space [0, 1]
+            vec3 pointTex = (point - u_box_min) / (u_box_max - u_box_min);
+            
+            // Sample the 3D texture (GL_R8 auto-normalizes to [0,1])
+            float density = texture(u_texture, pointTex).r;
+            
+            // Scale by absorption coefficient to control opacity
+            // Multiply by large factor since GL_R8 normalizes 255 to 1.0
+            float absorption_coefficient = density;
 
             thickness += absorption_coefficient * dt;
             float transmittance = exp(- thickness);
@@ -251,7 +259,7 @@ void main()
             L += absorption_coefficient * Le * transmittance * dt;
             
             t += dt;
-        }     
+        }
 
         // Final color
         float transmittance_background = exp(- thickness);
@@ -259,6 +267,11 @@ void main()
 
         vec3 finalColor = L + background * transmittance_background;
 
+        // Discard if almost fully transparent
+        if (transmittance_background > 0.99) {
+            discard;
+        }
+        
         FragColor = vec4(finalColor, u_color.a);
     }
 }

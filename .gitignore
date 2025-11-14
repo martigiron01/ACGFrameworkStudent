@@ -4,3 +4,4 @@ build/*
 res/volumes*
 imgui.ini
 libraries/*
+WARP.md
