@@ -11,6 +11,7 @@ uniform int u_volume_type = 0; // 0: homogeneous, 1: heterogeneous
 uniform vec3 u_camera_position;
 uniform vec4 u_color;
 uniform float u_absorption_coefficient;
+uniform float u_scattering_coefficient;
 uniform mat4 u_model;
 uniform vec4 u_background_color;
 uniform int u_num_steps;
@@ -22,6 +23,8 @@ uniform vec3 u_box_max;
 uniform vec3 u_light_position;
 uniform vec4 u_light_color;
 uniform float u_light_intensity;
+
+uniform sampler3D u_texture;
 
 
 vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
@@ -197,4 +200,66 @@ void main()
 
         FragColor = vec4(finalColor, u_color.a);
     }
+    else if (u_volume_type == 2) {
+      // VDB-based volume rendering
+
+      // Initialize ray in world space
+      vec3 rayOrigin = u_camera_position;
+      vec3 rayDir = normalize(v_world_position - u_camera_position);
+
+      // Transform ray into local space
+      mat4 invModel = inverse(u_model);
+      vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
+      vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
+
+      // Compute intersection with box in local space
+      vec2 intersection = intersectAABB(rayOriginLoc, rayDirLoc, u_box_min, u_box_max);
+      float tEntry = intersection.x;
+      float tExit = intersection.y;
+
+      // If no intersection, discard fragment
+      if (tExit < 0.0 || tEntry > tExit)
+          discard;
+
+      // Sampling parameters
+      float dt = u_step_length;
+      int N = int((tExit - tEntry) / dt);
+
+      float t = tEntry + 0.5 * dt;
+
+      // Optical thickness
+      float thickness = 0.0;
+      vec3 L = vec3(0.0); 
+
+      for (int i = 0; i < N; ++i)
+        {
+           vec3 point = rayOriginLoc + t * rayDirLoc; 
+            
+            // Map from bounding box local space to texture space [0, 1]
+            vec3 pointTex = (point - u_box_min) / (u_box_max - u_box_min);
+            
+            // Sample the 3D texture (GL_R8 auto-normalizes to [0,1])
+            float density = texture(u_texture, pointTex).r;
+            
+            // Scale by absorption coefficient to control opacity
+            float absorption_coefficient = density * u_absorption_coefficient;
+
+            thickness += absorption_coefficient * dt;
+            t += dt;
+        }
+
+        float transmittance = exp(- thickness);
+
+        // Final color
+        vec3 background = u_background_color.rgb;
+
+        vec3 finalColor = background * transmittance;
+
+        // Discard if almost fully transparent
+        if (transmittance > 0.99) {
+            discard;
+        }
+        
+        FragColor = vec4(finalColor, u_color.a);
+      }
 }

@@ -162,10 +162,11 @@ void StandardMaterial::renderInMenu()
 	if (!this->show_normals) ImGui::ColorEdit3("Color", (float*)&this->color);
 }
 
-VolumeMaterial::VolumeMaterial(glm::vec4 color, float absorption, int volume_type)
+VolumeMaterial::VolumeMaterial(glm::vec4 color, float absorption, float scattering, int volume_type)
 {
     this->color = color;
     this->absorption_coefficient = absorption;
+    this->scattering_coefficient = scattering;
     this->volume_type = volume_type;
 
     // We use a specific shader for volume rendering
@@ -193,6 +194,9 @@ void VolumeMaterial::setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model)
     // Extra uniform for absorption
     this->shader->setUniform("u_absorption_coefficient", this->absorption_coefficient);
 
+	// Extra uniform for scattering
+	this->shader->setUniform("u_scattering_coefficient", this->scattering_coefficient);
+
 	// Background color uniform
 	this->shader->setUniform("u_background_color", Application::instance->background_color);
 
@@ -217,9 +221,6 @@ void VolumeMaterial::setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model)
 void VolumeMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
 {
 	if (mesh && this->shader) {
-		
-        //glDepthMask(GL_FALSE);
-
 		// Enable shader
 		this->shader->enable();
 
@@ -230,24 +231,26 @@ void VolumeMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
 		mesh->render(GL_TRIANGLES);
 
 		this->shader->disable();
-
-		//glDepthMask(GL_TRUE);
 	}
 }
 
 void VolumeMaterial::renderInMenu()
 {
-	if (ImGui::Combo("Shader Type", &this->shader_type, "Absorption Only\0Absorption + Emission\0")) {
+	if (ImGui::Combo("Shader Type", &this->shader_type, "Absorption Only\0Absorption + Emission\0Complete Model\0")) {
 		if (this->shader_type == 0) {
 			this->shader = Shader::Get("res/shaders/basic.vs", "res/shaders/volume.fs");
 		}
-		else {
+		else if (this->shader_type == 1) {
 			this->shader = Shader::Get("res/shaders/basic.vs", "res/shaders/volume_emission.fs");
+		}
+		else if (this->shader_type == 2) {
+			this->shader = Shader::Get("res/shaders/basic.vs", "res/shaders/volume_emission_scattering.fs");
 		}
 	}
 	ImGui::ColorEdit4("Color", (float*)&this->color);
 	ImGui::SliderFloat("Step Length", &this->step_length, 0.001f, 0.500f);
-	ImGui::SliderFloat("Absorption Coefficient", &this->absorption_coefficient, 0.0f, 10.0f);
+	ImGui::SliderFloat("Absorption Coefficient", &this->absorption_coefficient, 0.0f, 5.0f);
+	ImGui::SliderFloat("Scattering Coefficient", &this->scattering_coefficient, 0.0f, 5.0f);
 	ImGui::Combo("Volume Type", &this->volume_type, "Homogeneous\0Heterogeneous\0VDB-based\0");
 	ImGui::SliderFloat("Noise Scale", &this->noise_scale, 0.0f, 10.0f);
 }

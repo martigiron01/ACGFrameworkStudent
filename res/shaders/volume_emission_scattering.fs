@@ -242,6 +242,25 @@ void main()
         {
             vec3 point = rayOriginLoc + t * rayDirLoc; 
             
+            // Scattering ray
+            vec3 rayOriginScat = point;
+            vec3 rayDirScat = normalize(u_light_position - point);
+
+            // Find intersection of scattering ray with volume bounds
+            vec2 intersectionScat = intersectAABB(rayOriginScat, rayDirScat, u_box_min, u_box_max);
+            float tEntryScat = intersectionScat.x;
+            float tExitScat = intersectionScat.y;
+
+            float light_transmittance = 0.0;
+            vec3 Ls = vec3(0.0);
+            float ts = tEntryScat + 0.5 * dt;
+            for (ts; ts < tExitScat; ts += dt) {
+                vec3 samplePoint = rayOriginScat + ts * rayDirScat;
+                vec3 samplePointTex = (samplePoint - u_box_min) / (u_box_max - u_box_min);
+
+                float sampleDensity = texture(u_texture, samplePointTex).r;
+                float sampleExtinction = sampleDensity * u_absorption_coefficient;
+            }
             // Map from bounding box local space to texture space [0, 1]
             vec3 pointTex = (point - u_box_min) / (u_box_max - u_box_min);
             
