@@ -20,7 +20,7 @@ uniform float noise_scale;
 uniform vec3 u_box_min;
 uniform vec3 u_box_max;
 
-uniform vec3 u_light_position;
+uniform vec3 u_local_light_position;
 uniform vec4 u_light_color;
 uniform float u_light_intensity;
 
@@ -133,7 +133,7 @@ void main()
     vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
     vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
 
-    vec3 lightPositionLoc = (invModel * vec4(u_light_position, 1.0)).xyz;
+    vec3 lightPositionLoc = u_local_light_position;
 
     if (u_volume_type == 0) {
         // Compute intersection with box in local space
@@ -260,7 +260,7 @@ void main()
                   float lightAbsorptionCoefficient = lightDensity * u_absorption_coefficient;
                   float lightScatteringCoefficient = lightDensity * u_scattering_coefficient;
 
-                  float lightExtinctionCoefficient = lightAbsorptionCoefficient;
+                  float lightExtinctionCoefficient = lightAbsorptionCoefficient + lightScatteringCoefficient;
                   accumulatedOpticalThickness += lightExtinctionCoefficient * dt;
                   tLight += dt;
               }

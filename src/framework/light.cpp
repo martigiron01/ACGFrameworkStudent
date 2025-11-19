@@ -15,6 +15,8 @@ Light::Light(glm::vec3 position, float intensity, glm::vec4 color)
 	this->mesh = Mesh::Get("res/meshes/sphere.obj");
 	this->model = glm::scale(this->model, glm::vec3(0.1f));
 	this->material = new FlatMaterial(color);
+	this->color = color;
+	this->position = position;
 }
 
 void Light::setUniforms(Shader* shader, const glm::mat4& model)
