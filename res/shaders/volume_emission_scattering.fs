@@ -124,17 +124,18 @@ float getAbsorption(vec3 point)
 
 void main()
 {
+    // Initialize ray in world space
+    vec3 rayOrigin = u_camera_position;
+    vec3 rayDir = normalize(v_world_position - u_camera_position);
+
+    // Transform ray into local space
+    mat4 invModel = inverse(u_model);
+    vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
+    vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
+
+    vec3 lightPositionLoc = (invModel * vec4(u_light_position, 1.0)).xyz;
+
     if (u_volume_type == 0) {
-        
-        // Initialize ray in world space
-        vec3 rayOrigin = u_camera_position;
-        vec3 rayDir = normalize(v_world_position - u_camera_position);
-
-        // Transform ray into local space
-        mat4 invModel = inverse(u_model);
-        vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
-        vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
-
         // Compute intersection with box in local space
         vec2 intersection = intersectAABB(rayOriginLoc, rayDirLoc, u_box_min, u_box_max);
         float tEntry = intersection.x;
@@ -157,15 +158,6 @@ void main()
         FragColor = vec4(finalColor, u_color.a);
     }
       else if (u_volume_type == 1) {
-        // Initialize ray in world space
-        vec3 rayOrigin = u_camera_position;
-        vec3 rayDir = normalize(v_world_position - u_camera_position);
-
-        // Transform ray into local space
-        mat4 invModel = inverse(u_model);
-        vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
-        vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
-
         // Compute intersection with box in local space
         vec2 intersection = intersectAABB(rayOriginLoc, rayDirLoc, u_box_min, u_box_max);
         float tEntry = intersection.x;
@@ -209,16 +201,6 @@ void main()
         FragColor = vec4(finalColor, u_color.a);
     } else if (u_volume_type == 2) {
         // VDB-based volume rendering
-
-        // Initialize ray in world space
-        vec3 rayOrigin = u_camera_position;
-        vec3 rayDir = normalize(v_world_position - u_camera_position);
-
-        // Transform ray into local space
-        mat4 invModel = inverse(u_model);
-        vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
-        vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
-
         // Compute intersection with box in local space
         vec2 intersection = intersectAABB(rayOriginLoc, rayDirLoc, u_box_min, u_box_max);
         float tEntry = intersection.x;
@@ -238,46 +220,69 @@ void main()
         float thickness = 0.0;
         vec3 L = vec3(0.0); 
 
-        for (int i = 0; i < N; ++i)
-        {
-            vec3 point = rayOriginLoc + t * rayDirLoc; 
-            
-            // Scattering ray
-            vec3 rayOriginScat = point;
-            vec3 rayDirScat = normalize(u_light_position - point);
+        for (int i = 0; i < N; ++i) {
+          vec3 point = rayOriginLoc + t * rayDirLoc; 
+          
+          vec3 texturePoint = (point - u_box_min) / (u_box_max - u_box_min);
 
-            // Find intersection of scattering ray with volume bounds
-            vec2 intersectionScat = intersectAABB(rayOriginScat, rayDirScat, u_box_min, u_box_max);
-            float tEntryScat = intersectionScat.x;
-            float tExitScat = intersectionScat.y;
+          // Density from 3D texture
+          float density = texture(u_texture, texturePoint).r;
+          float absorption_coefficient = density * u_absorption_coefficient;
+          float scattering_coefficient = density * u_scattering_coefficient;
 
-            float light_transmittance = 0.0;
-            vec3 Ls = vec3(0.0);
-            float ts = tEntryScat + 0.5 * dt;
-            for (ts; ts < tExitScat; ts += dt) {
-                vec3 samplePoint = rayOriginScat + ts * rayDirScat;
-                vec3 samplePointTex = (samplePoint - u_box_min) / (u_box_max - u_box_min);
+          float extinction_coefficient = absorption_coefficient + scattering_coefficient;
 
-                float sampleDensity = texture(u_texture, samplePointTex).r;
-                float sampleExtinction = sampleDensity * u_absorption_coefficient;
-            }
-            // Map from bounding box local space to texture space [0, 1]
-            vec3 pointTex = (point - u_box_min) / (u_box_max - u_box_min);
-            
-            // Sample the 3D texture (GL_R8 auto-normalizes to [0,1])
-            float density = texture(u_texture, pointTex).r;
-            
-            // Scale by absorption coefficient to control opacity
-            float absorption_coefficient = density * u_absorption_coefficient;
+          thickness += extinction_coefficient * dt;
+          float transmittance = exp(- thickness);
 
-            thickness += absorption_coefficient * dt;
-            float transmittance = exp(- thickness);
+          // Scattering toward light
+          vec3 lightDir = normalize(lightPositionLoc - point);
 
-            // Emission contribution
-            vec3 Le = u_color.rgb;
-            L += absorption_coefficient * Le * transmittance * dt;
-            
-            t += dt;
+          // Offset to avoid self-intersection
+          vec3 offsetPoint = point + lightDir * dt;
+
+          // Compute intersection
+          vec2 lightIntersection = intersectAABB(offsetPoint, lightDir, u_box_min, u_box_max);
+          float tLightEntry = lightIntersection.x;
+          float tLightExit = lightIntersection.y;
+          float lightTransmittance = 1.0;
+
+          if (tLightEntry < tLightExit) {
+              float tLight = tLightEntry + 0.5 * dt;
+              int Nlight = int((tLightExit - tLightEntry) / dt);
+              float accumulatedOpticalThickness = 0.0;
+
+              for (int j = 0; j < Nlight; ++j)
+              {
+                  vec3 lightPoint = offsetPoint + tLight * lightDir; 
+                  vec3 lightTexturePoint = (lightPoint - u_box_min) / (u_box_max - u_box_min);
+                  float lightDensity = texture(u_texture, lightTexturePoint).r;
+                  float lightAbsorptionCoefficient = lightDensity * u_absorption_coefficient;
+                  float lightScatteringCoefficient = lightDensity * u_scattering_coefficient;
+
+                  float lightExtinctionCoefficient = lightAbsorptionCoefficient;
+                  accumulatedOpticalThickness += lightExtinctionCoefficient * dt;
+                  tLight += dt;
+              }
+
+               lightTransmittance = exp(- accumulatedOpticalThickness);
+
+          }
+          else {
+              lightTransmittance = 1.0;
+          }
+
+          vec3 Li = u_light_color.rgb * u_light_intensity * lightTransmittance;
+
+          float phaseFunction = 1.0 / (4.0 * 3.14159265); // Isotropic phase function
+
+          vec3 Ls = Li * phaseFunction;
+
+          vec3 Le = u_color.rgb;
+
+          L += transmittance * (extinction_coefficient * Le + scattering_coefficient * Ls) * dt;
+
+          t += dt;
         }
 
         // Final color

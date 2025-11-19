@@ -69,7 +69,7 @@ public:
 	float scattering_coefficient;
 	int shader_type = 0; // 0: absorption only, 1: absorption + emission
 	int volume_type = 0; // 0: homogeneous, 1: heterogeneous
-	float step_length = 0.004f;
+	float step_length = 0.1f;
 	float noise_scale = 3.0f;
 
     VolumeMaterial(glm::vec4 color = glm::vec4(0.f), float absorption_coefficient = 0.5f, float scattering_coefficient = 0.5f, int volume_type = 0);

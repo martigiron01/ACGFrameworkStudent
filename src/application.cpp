@@ -48,7 +48,7 @@ void Application::init(GLFWwindow* window)
     this->node_list.push_back(bunny);
 
 
-    Light* light = new Light();
+    Light* light = new Light(glm::vec3(2.f, 4.f, 2.f), 1.5f, glm::vec4(1.f, 1.f, 0.f, 1.f));
     light_list.push_back(light);
     node_list.push_back(light);
 }

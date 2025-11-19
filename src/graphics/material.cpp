@@ -211,7 +211,9 @@ void VolumeMaterial::setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model)
 
 	Light* light = Application::instance->light_list[0];
 	this->shader->setUniform("u_light_intensity", light->intensity);
-
+	this->shader->setUniform("u_light_position", light->position);
+	this->shader->setUniform("u_light_color", light->color);
+	
 	// Set texture only if it exists
 	if (this->texture) {
 		this->shader->setUniform("u_texture", this->texture, 0);
