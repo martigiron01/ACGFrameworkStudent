@@ -243,7 +243,7 @@ void main()
             vec3 point = rayOriginLoc + t * rayDirLoc; 
             
             // Map from bounding box local space to texture space [0, 1]
-            vec3 pointTex = (point - u_box_min) / (u_box_max - u_box_min);
+            vec3 pointTex = (point + 1.0) / 2.0;
             
             // Sample the 3D texture (GL_R8 auto-normalizes to [0,1])
             float density = texture(u_texture, pointTex).r;

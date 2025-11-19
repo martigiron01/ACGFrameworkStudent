@@ -223,7 +223,7 @@ void main()
         for (int i = 0; i < N; ++i) {
           vec3 point = rayOriginLoc + t * rayDirLoc; 
           
-          vec3 texturePoint = (point - u_box_min) / (u_box_max - u_box_min);
+          vec3 texturePoint = (point + 1.0) / 2.0;
 
           // Density from 3D texture
           float density = texture(u_texture, texturePoint).r;
