@@ -26,9 +26,7 @@ uniform float u_light_intensity;
 
 uniform sampler3D u_texture;
 
-uniform float g_value; 
-
-//vec3 texturePoint = texture(u_texture, vec3(0.5, 0.5, 0.5)).xyz;
+uniform float g_value;
 
 vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
 {
@@ -41,7 +39,7 @@ vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
     return vec2(tNear, tFar);
 }
 
-    //	Simplex 3D Noise 
+//	Simplex 3D Noise 
 //	by Ian McEwan, Stefan Gustavson (https://github.com/stegu/webgl-noise)
 //
 vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
@@ -120,7 +118,6 @@ float snoise(vec3 v){
 float getAbsorption(vec3 point)
 {
     float noise = snoise(point * noise_scale);
-    noise *= u_absorption_coefficient;
     return max(0.0, noise);
 }
 
@@ -143,19 +140,77 @@ void main()
         float tEntry = intersection.x;
         float tExit = intersection.y;
 
-        // If no intersection, discard fragment
         if (tExit < 0.0 || tEntry > tExit)
             discard;
 
-        // Optical thickness
-        float thickness = max(0.0, tExit - tEntry);
-        // Transmittance
-        float transmittance = exp(- thickness * u_absorption_coefficient);
+        float dt = u_step_length;
+        int N = int((tExit - tEntry) / dt);
 
-        // Final color
+        float t = tEntry + 0.5 * dt;
+
+        float thickness = 0.0;
+        vec3 L = vec3(0.0);
+
+        for (int i = 0; i < N; ++i)
+        {
+            vec3 point = rayOriginLoc + t * rayDirLoc;
+
+            float absorption_coefficient = u_absorption_coefficient;
+            float scattering_coefficient = u_scattering_coefficient;
+            float extinction_coefficient = absorption_coefficient + scattering_coefficient;
+
+            thickness += extinction_coefficient * dt;
+            float transmittance = exp(- thickness);
+
+            vec3 lightDir = normalize(lightPositionLoc - point);
+            vec3 offsetPoint = point + lightDir * dt;
+
+            vec2 lightIntersection = intersectAABB(offsetPoint, lightDir, u_box_min, u_box_max);
+            float tLightEntry = lightIntersection.x;
+            float tLightExit = lightIntersection.y;
+            float lightTransmittance = 1.0;
+
+            if (tLightEntry < tLightExit) {
+                float tLight = tLightEntry + 0.5 * dt;
+                int Nlight = int((tLightExit - tLightEntry) / dt);
+                float accumulatedOpticalThickness = 0.0;
+
+                for (int j = 0; j < Nlight; ++j)
+                {
+                    vec3 lightPoint = offsetPoint + tLight * lightDir;
+
+                    float lightAbsorptionCoefficient = u_absorption_coefficient;
+                    float lightScatteringCoefficient = u_scattering_coefficient;
+                    float lightExtinctionCoefficient = lightAbsorptionCoefficient + lightScatteringCoefficient;
+
+                    accumulatedOpticalThickness += lightExtinctionCoefficient * dt;
+                    tLight += dt;
+                }
+
+                lightTransmittance = exp(- accumulatedOpticalThickness);
+            }
+
+            vec3 Li = u_light_color.rgb * u_light_intensity * lightTransmittance;
+
+            float g_2 = g_value * g_value;
+            float cosTheta = dot(lightDir, -rayDirLoc);
+            float phaseFunction =
+                1.0 / (4.0 * 3.14159265) *
+                (1.0 - g_2) /
+                pow(1.0 + g_2 - 2.0 * g_value * cosTheta, 1.5);
+
+            vec3 Ls = Li * phaseFunction;
+            vec3 Le = u_color.rgb;
+
+            L += transmittance * (extinction_coefficient * Le + scattering_coefficient * Ls) * dt;
+
+            t += dt;
+        }
+
+        float transmittance_background = exp(- thickness);
         vec3 background = u_background_color.rgb;
-        vec3 emission = u_color.rgb;
-        vec3 finalColor = background * transmittance + emission * (1.0 - transmittance);
+
+        vec3 finalColor = L + background * transmittance_background;
 
         FragColor = vec4(finalColor, u_color.a);
     }
@@ -182,15 +237,62 @@ void main()
         for (int i = 0; i < N; ++i)
         {
             vec3 point = rayOriginLoc + t * rayDirLoc; 
-            float absorption_coefficient = getAbsorption(point);
+            float density = getAbsorption(point);
+            float absorption_coefficient = density * u_absorption_coefficient;
+            float scattering_coefficient = density * u_scattering_coefficient;
 
-            thickness += absorption_coefficient * dt;
+            float extinction_coefficient = absorption_coefficient + scattering_coefficient;
+
+            thickness += extinction_coefficient * dt;
             float transmittance = exp(- thickness);
 
-            // Emission contribution
+            // Scattering toward light
+            vec3 lightDir = normalize(lightPositionLoc - point);
+
+            vec3 offsetPoint = point + lightDir * dt;
+
+            // Compute intersection
+            vec2 lightIntersection = intersectAABB(offsetPoint, lightDir, u_box_min, u_box_max);
+            float tLightEntry = lightIntersection.x;
+            float tLightExit = lightIntersection.y;
+            float lightTransmittance = 1.0;
+
+            if (tLightEntry < tLightExit) {
+                float tLight = tLightEntry + 0.5 * dt;
+                int Nlight = int((tLightExit - tLightEntry) / dt);
+                float accumulatedOpticalThickness = 0.0;
+
+                for (int j = 0; j < Nlight; ++j)
+                {
+                    vec3 lightPoint = offsetPoint + tLight * lightDir; 
+                    float lightDensity = getAbsorption(lightPoint);
+                    float lightAbsorptionCoefficient = lightDensity * u_absorption_coefficient;
+                    float lightScatteringCoefficient = lightDensity * u_scattering_coefficient;
+
+                    float lightExtinctionCoefficient = lightAbsorptionCoefficient + lightScatteringCoefficient;
+                    accumulatedOpticalThickness += lightExtinctionCoefficient * dt;
+                    tLight += dt;
+                }
+
+                 lightTransmittance = exp(- accumulatedOpticalThickness);
+
+            }
+            else {
+                lightTransmittance = 1.0;
+            }
+
+            vec3 Li = u_light_color.rgb * u_light_intensity * lightTransmittance;
+
+            float g_2 = g_value * g_value;
+            float cosTheta = dot(lightDir, -rayDirLoc); // Angle between light direction and view direction
+            float phaseFunction = 1/(4.0 * 3.14159265) * (1.0 - g_2) / pow(1.0 + g_2 - 2.0 * g_value * cosTheta, 1.5); // Henyey-Greenstein phase function
+
+            vec3 Ls = Li * phaseFunction;
+
             vec3 Le = u_color.rgb;
-            L += absorption_coefficient * Le * transmittance * dt;
-            
+
+            L += transmittance * (extinction_coefficient * Le + scattering_coefficient * Ls) * dt;
+
             t += dt;
         }     
 
@@ -223,7 +325,7 @@ void main()
         vec3 L = vec3(0.0); 
 
         for (int i = 0; i < N; ++i) {
-          vec3 point = rayOriginLoc + t * rayDirLoc; 
+          vec3 point = rayOriginLoc + t * rayDirLoc;
           
           vec3 texturePoint = (point + 1.0) / 2.0;
 
