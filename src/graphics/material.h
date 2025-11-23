@@ -71,6 +71,7 @@ public:
 	int volume_type = 0; // 0: homogeneous, 1: heterogeneous
 	float step_length = 0.1f;
 	float noise_scale = 3.0f;
+	float g_value = 0.0f; // Scattering anisotropy
 
     VolumeMaterial(glm::vec4 color = glm::vec4(0.f), float absorption_coefficient = 0.5f, float scattering_coefficient = 0.5f, int volume_type = 0);
     ~VolumeMaterial();

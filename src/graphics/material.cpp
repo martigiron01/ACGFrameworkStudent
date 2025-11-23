@@ -216,6 +216,8 @@ void VolumeMaterial::setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model)
 	if (this->texture) {
 		this->shader->setUniform("u_texture", this->texture, 0);
 	}
+
+	this->shader->setUniform("g_value", this->g_value);
 }
 
 void VolumeMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
@@ -253,6 +255,7 @@ void VolumeMaterial::renderInMenu()
 	ImGui::SliderFloat("Scattering Coefficient", &this->scattering_coefficient, 0.0f, 5.0f);
 	ImGui::Combo("Volume Type", &this->volume_type, "Homogeneous\0Heterogeneous\0VDB-based\0");
 	ImGui::SliderFloat("Noise Scale", &this->noise_scale, 0.0f, 10.0f);
+	ImGui::SliderFloat("Scattering Anisotropy (g)", &this->g_value, -1.0f, 1.0f);
 }
 
 void VolumeMaterial::loadVDB(std::string file_path)

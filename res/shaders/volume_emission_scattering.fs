@@ -26,6 +26,8 @@ uniform float u_light_intensity;
 
 uniform sampler3D u_texture;
 
+uniform float g_value; 
+
 //vec3 texturePoint = texture(u_texture, vec3(0.5, 0.5, 0.5)).xyz;
 
 vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
@@ -274,7 +276,9 @@ void main()
 
           vec3 Li = u_light_color.rgb * u_light_intensity * lightTransmittance;
 
-          float phaseFunction = 1.0 / (4.0 * 3.14159265); // Isotropic phase function
+          float g_2 = g_value * g_value;
+          float cosTheta = dot(lightDir, -rayDirLoc); // Angle between light direction and view direction
+          float phaseFunction = 1/(4.0 * 3.14159265) * (1.0 - g_2) / pow(1.0 + g_2 - 2.0 * g_value * cosTheta, 1.5); // Henyey-Greenstein phase function
 
           vec3 Ls = Li * phaseFunction;
 
