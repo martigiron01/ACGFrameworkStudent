@@ -381,3 +381,48 @@ void VolumeMaterial::estimate3DTexture(easyVDB::OpenVDBReader* vdbReader)
 		this->texture->create3D(resolution, resolution, resolution, GL_RED, GL_FLOAT, false, data, GL_R8);
     }
 }
+
+MedicalMaterial::MedicalMaterial(glm::vec4 color)
+{
+	this->color = color;
+	this->shader = Shader::Get("res/shaders/basic.vs", "res/shaders/medical_volume.fs");
+}
+MedicalMaterial::~MedicalMaterial() { }
+
+void MedicalMaterial::setUniforms(Camera* camera, glm::mat4 model)
+{
+	// Upload node uniforms
+	this->shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+	this->shader->setUniform("u_camera_position", camera->eye);
+	this->shader->setUniform("u_model", model);
+
+	this->shader->setUniform("u_color", this->color);
+
+	// Set texture only if it exists
+	if (this->texture) {
+		this->shader->setUniform("u_texture", this->texture, 0);
+	}
+}
+
+void MedicalMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
+{
+	if (mesh && this->shader) {
+		// Enable shader
+		this->shader->enable();
+
+		// Upload uniforms
+		setUniforms(camera, model);
+
+		// Do the draw call
+		mesh->render(GL_TRIANGLES);
+
+		this->shader->disable();
+	}
+}
+
+void MedicalMaterial::renderInMenu()
+{
+	ImGui::Text("Material Type: %s", std::string("Medical Volume").c_str());
+
+	ImGui::ColorEdit3("Color", (float*)&this->color);
+}

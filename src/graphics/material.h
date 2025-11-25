@@ -83,3 +83,16 @@ public:
 	void loadVDB(std::string file_path);
 	void estimate3DTexture(easyVDB::OpenVDBReader* vdbReader);
 };
+
+class MedicalMaterial : public FlatMaterial {
+public:
+
+	MedicalMaterial(glm::vec4 color = glm::vec4(1.f));
+	~MedicalMaterial();
+
+	void setUniforms(Camera* camera, glm::mat4 model);
+	void render(Mesh* mesh, glm::mat4 model, Camera* camera);
+	void renderInMenu();
+
+	//void loadDCMs(std::string file_path);
+};
