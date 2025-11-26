@@ -42,11 +42,15 @@ bool VolumeDICOMLoader::loadSeries(const std::string& folder)
     height = firstImg.GetDimension(1);
 
     double spacing[3];
-    firstImg.GetSpacing(spacing);
+    spacing[0] = firstImg.GetSpacing(0);
+    spacing[1] = firstImg.GetSpacing(1);
+    spacing[2] = firstImg.GetSpacing(2);
     voxelSpacing = glm::vec3(spacing[0], spacing[1], spacing[2]);
 
     double origin[3];
-    firstImg.GetOrigin(origin);
+    origin[0] = firstImg.GetOrigin(0);
+    origin[1] = firstImg.GetOrigin(1);
+    origin[2] = firstImg.GetOrigin(2);
 
     physMin = glm::vec3(origin[0], origin[1], origin[2]);
 

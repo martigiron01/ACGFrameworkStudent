@@ -34,6 +34,21 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(imguizmo_h imguizmo_cpp)
 
+# GDCM (Grassroots DICOM)
+FetchContent_Declare(
+    gdcm
+    GIT_REPOSITORY https://github.com/malaterre/GDCM.git
+    GIT_TAG v3.0.24
+)
+
+# Configure GDCM options
+set(GDCM_BUILD_SHARED_LIBS OFF CACHE BOOL "")
+set(GDCM_BUILD_TESTING OFF CACHE BOOL "")
+set(GDCM_BUILD_EXAMPLES OFF CACHE BOOL "")
+set(GDCM_BUILD_APPLICATIONS OFF CACHE BOOL "")
+
+FetchContent_MakeAvailable(gdcm)
+
 # Macro to map filters to folder structure for MSVC projects
 macro(GroupSources curdir)
     if(MSVC)
@@ -144,6 +159,17 @@ set_property(TARGET imgui PROPERTY FOLDER "External/imgui")
 
 # imguizmo
 target_include_directories(${PROJECT_NAME} PUBLIC ${DIR_LIBS}/imguizmo)
+
+# GDCM
+target_link_libraries(${PROJECT_NAME} PUBLIC gdcmMSFF)
+target_include_directories(${PROJECT_NAME} PUBLIC 
+    ${gdcm_BINARY_DIR}/Source/Common
+    ${gdcm_BINARY_DIR}/Source/DataStructureAndEncodingDefinition
+    ${gdcm_SOURCE_DIR}/Source/Common
+    ${gdcm_SOURCE_DIR}/Source/DataStructureAndEncodingDefinition
+    ${gdcm_SOURCE_DIR}/Source/MediaStorageAndFileFormat
+    ${gdcm_SOURCE_DIR}/Source/DataDictionary
+)
 
 message(STATUS "dir root: ${DIR_ROOT}")
 message(STATUS "bin root: ${CMAKE_BINARY_DIR}")
