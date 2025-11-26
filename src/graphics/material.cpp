@@ -402,6 +402,7 @@ void MedicalMaterial::setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model)
 
 	this->shader->setUniform("u_color", this->color);
 	this->shader->setUniform("u_cutoff", this->cutoff);
+	this->shader->setUniform("u_plane", this->plane);
 
 	// Set texture only if it exists
 	if (this->texture) {
@@ -428,7 +429,8 @@ void MedicalMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
 void MedicalMaterial::renderInMenu()
 {
 	ImGui::Text("Material Type: %s", std::string("Medical Volume").c_str());
-	ImGui::DragFloat4("Cutoff", (float*)&this->cutoff, 0.01f, -1.f, 1.f);
+	ImGui::DragFloat3("Plane", (float*)&this->plane, 1.f, -1.f, 1.f);
+	ImGui::SliderFloat("Cutoff", &this->cutoff, 0.0f, 1.0f);
 	ImGui::SliderFloat("Step Length", &this->step_length, 0.001f, 0.500f);
 
 	ImGui::ColorEdit3("Color", (float*)&this->color);

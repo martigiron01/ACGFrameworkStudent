@@ -22,8 +22,7 @@ void Application::init(GLFWwindow* window)
 
     this->ambient_light = glm::vec4(0.75f, 0.75f, 0.75f, 1.f);
 
-    // Sky like background
-    this->background_color = glm::vec4(0.53f, 0.81f, 0.92f, 1.f);
+    this->background_color = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
     /* ADD NODES TO THE SCENE */
     /*
@@ -58,10 +57,11 @@ void Application::init(GLFWwindow* window)
     volume_node->material = dicomMaterial;
     this->node_list.push_back(volume_node);
 
-
+    /*
     Light* light = new Light(glm::vec3(2.f, 4.f, 2.f), 1.5f, glm::vec4(1.f, 1.f, 0.f, 1.f));
     light_list.push_back(light);
     node_list.push_back(light);
+    */
 }
 
 void Application::update(float dt)

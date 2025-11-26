@@ -87,7 +87,8 @@ public:
 class MedicalMaterial : public FlatMaterial {
 public:
 	float step_length = 0.04f;
-	glm::vec4 cutoff = glm::vec4(0.f);
+	glm::vec3 plane = glm::vec3(0.f);
+	float cutoff = 0.0f;
 	MedicalMaterial(glm::vec4 color = glm::vec4(1.f));
 	~MedicalMaterial();
 

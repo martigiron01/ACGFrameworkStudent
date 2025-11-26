@@ -14,7 +14,8 @@ uniform float u_step_length;
 uniform vec4  u_background_color;
 
 // Cut plane (xyz = normal, w = offset)
-uniform vec4 u_cutoff;
+uniform vec3 u_plane;
+uniform float u_cutoff;
 // Transfer function for normalized CT [0..1].
 vec3 transferFunction(float d)
 {
@@ -68,7 +69,7 @@ void main()
         vec3 p = ro + rd * t;
 
         // Apply cut plane BEFORE sampling
-        if (dot(u_cutoff.xyz, p) < u_cutoff.w)
+        if (dot(u_plane, p) < u_cutoff)
             continue;
 
         vec3 uvw = (p - u_box_min) / (u_box_max - u_box_min);
