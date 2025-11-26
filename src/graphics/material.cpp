@@ -430,7 +430,7 @@ void MedicalMaterial::renderInMenu()
 {
 	ImGui::Text("Material Type: %s", std::string("Medical Volume").c_str());
 	ImGui::DragFloat3("Plane", (float*)&this->plane, 1.f, -1.f, 1.f);
-	ImGui::SliderFloat("Cutoff", &this->cutoff, 0.0f, 1.0f);
+	ImGui::SliderFloat("Cutoff", &this->cutoff, -1.0f, 1.0f);
 	ImGui::SliderFloat("Step Length", &this->step_length, 0.001f, 0.500f);
 
 	ImGui::ColorEdit3("Color", (float*)&this->color);
