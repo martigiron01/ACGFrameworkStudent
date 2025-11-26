@@ -88,6 +88,8 @@ bool VolumeDICOMLoader::loadSeries(const std::string& folder)
         voxelSpacing.y * height,
         voxelSpacing.z * depth
     );
+    // Create 3D texture
+    create3DTextureFromDicom();
 
     return true;
 }
@@ -136,3 +138,31 @@ float VolumeDICOMLoader::sampleValue(const glm::vec3& p) const
 
     return c0*(1-dz)+c1*dz;
 }
+
+void VolumeDICOMLoader::create3DTextureFromDicom()
+{
+    if (width == 0 || height == 0 || depth == 0 || volume.empty())
+        return;
+
+    // Choose an internal format.
+    // R8  = normalized 0..1 (good for quick preview)
+    // R16F/R32F = high precision
+    GLenum internalFormat = GL_R8;     // or GL_R16F / GL_R32F
+
+    // The input data type of the array:
+    GLenum format = GL_RED;
+    GLenum type   = GL_FLOAT;
+
+    this->texture = new Texture();
+    this->texture->create3D(
+        width,
+        height,
+        depth,
+        format,          // GL_RED
+        type,            // GL_FLOAT
+        false,           // no mipmaps
+        volume.data(),   // pointer to your float values
+        internalFormat   // GL_R8 (or GL_R16F, GL_R32F)
+    );
+}
+

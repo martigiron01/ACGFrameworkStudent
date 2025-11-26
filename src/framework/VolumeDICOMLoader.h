@@ -2,9 +2,13 @@
 #include <string>
 #include <vector>
 #include <glm/glm.hpp>
+#include "graphics/texture.h"
 
 class VolumeDICOMLoader {
 public:
+
+    Texture* texture = NULL;
+
     bool loadSeries(const std::string& folder);
 
     int width = 0;
@@ -25,4 +29,5 @@ public:
 
 private:
     bool loadSortedDicomFiles(const std::string& folder, std::vector<std::string>& files);
+    void create3DTextureFromDicom();
 };

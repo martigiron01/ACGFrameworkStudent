@@ -4,7 +4,7 @@
 #include "framework/camera.h"
 #include "framework/scenenode.h"
 #include "framework/light.h"
-
+#include "framework/volumedicomloader.h"
 #include <glm/vec2.hpp>
 
 class Application

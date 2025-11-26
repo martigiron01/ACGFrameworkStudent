@@ -1,106 +1,96 @@
 #version 330 core
 
 in vec3 v_world_position;
-in vec3 v_normal;
-in vec4 v_color;
-in vec2 v_uv;
-
 out vec4 FragColor;
 
-uniform vec3 u_camera_position;
-uniform vec4 u_color;
-uniform mat4 u_model;
-uniform vec4 u_background_color;
-uniform int u_num_steps;
-uniform float u_step_length;
-uniform vec3 u_box_min;
-uniform vec3 u_box_max;
+uniform vec3  u_camera_position;
+uniform mat4  u_model;
+uniform vec3  u_box_min;
+uniform vec3  u_box_max;
 
 uniform sampler3D u_texture;
 
-vec2 intersectAABB(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax)
+uniform float u_step_length;
+uniform vec4  u_background_color;
+
+// Cut plane (xyz = normal, w = offset)
+uniform vec4 u_cutoff;
+// Transfer function for normalized CT [0..1].
+vec3 transferFunction(float d)
 {
-    vec3 tMin = (boxMin - rayOrigin) / rayDir;
-    vec3 tMax = (boxMax - rayOrigin) / rayDir;
-    vec3 t1 = min(tMin, tMax);
-    vec3 t2 = max(tMin, tMax);
-    float tNear = max(max(t1.x, t1.y), t1.z);
-    float tFar = min(min(t2.x, t2.y), t2.z);
+    if (d < 0.25)
+        return vec3(0.0);
+
+    if (d < 0.6)
+        return mix(vec3(0.0), vec3(1.0, 0.25, 0.25), (d - 0.25) / 0.35);
+
+    return vec3(1.0);
+}
+
+vec2 intersectAABB(vec3 ro, vec3 rd, vec3 mn, vec3 mx)
+{
+    vec3 t1 = (mn - ro) / rd;
+    vec3 t2 = (mx - ro) / rd;
+    vec3 tmin = min(t1, t2);
+    vec3 tmax = max(t1, t2);
+
+    float tNear = max(max(tmin.x, tmin.y), tmin.z);
+    float tFar  = min(min(tmax.x, tmax.y), tmax.z);
+
     return vec2(tNear, tFar);
 }
 
-vec3 transferFunction(float density) {
-    //Bones
-    if (density < -500) {
-        return vec3(1.0); // White
-    }
-    //Lungs
-    else if (density >= -500 && density < 0) {
-        return vec3(1.0, 0.0, 1.0); // Purple
-    }
-    //Heart
-    else if (density >= 0 && density < 300) {
-        return vec3(1.0, 0.0, 0.0); // Red
-    }
-    //Air
-    else {
-        return vec3(0.0); // Black
-    }
-}
+void main()
+{
+    vec3 roW = u_camera_position;
+    vec3 rdW = normalize(v_world_position - u_camera_position);
 
-void main() {
-    // Initialize ray in world space
-    vec3 rayOrigin = u_camera_position;
-    vec3 rayDir = normalize(v_world_position - u_camera_position);
-
-    // Transform ray into local space
     mat4 invModel = inverse(u_model);
-    vec3 rayOriginLoc = (invModel * vec4(rayOrigin, 1.0)).xyz;
-    vec3 rayDirLoc = normalize((invModel * vec4(rayDir, 0.0)).xyz);
+    vec3 ro = (invModel * vec4(roW, 1.0)).xyz;
+    vec3 rd = normalize((invModel * vec4(rdW, 0.0)).xyz);
 
-    // Compute intersection with box in local space
-    vec2 intersection = intersectAABB(rayOriginLoc, rayDirLoc, u_box_min, u_box_max);
-    float tEntry = intersection.x;
-    float tExit = intersection.y;
+    vec2 hit = intersectAABB(ro, rd, u_box_min, u_box_max);
+    float t0 = hit.x;
+    float t1 = hit.y;
 
-    // If no intersection, discard fragment
-    if (tExit < 0.0 || tEntry > tExit)
+    if (t1 < 0.0 || t0 > t1)
         discard;
 
-    // Sampling parameters
+    t0 = max(t0, 0.0);
+
     float dt = u_step_length;
 
-    // Optical thickness
-    float thickness = 0.0;
-    vec3 L = vec3(0.0); 
+    vec3 color = vec3(0.0);
+    float alpha = 0.0;
 
-    for (float t = tEntry + 0.5 * dt; t < tExit; t += dt)
+    for (float t = t0; t < t1; t += dt)
     {
-        vec3 point = rayOriginLoc + t * rayDirLoc; 
-        
-        // Map from bounding box local space to texture space [0, 1]
-        vec3 pointTex = (point + 1.0) / 2.0;
-        
-        // Sample the 3D texture (GL_R8 auto-normalizes to [0,1])
-        float density = texture(u_texture, pointTex).r;
-        
-        vec3 color = transferFunction(density);
+        vec3 p = ro + rd * t;
 
-        thickness += density * dt;
+        // Apply cut plane BEFORE sampling
+        if (dot(u_cutoff.xyz, p) < u_cutoff.w)
+            continue;
+
+        vec3 uvw = (p - u_box_min) / (u_box_max - u_box_min);
+
+        if (any(lessThan(uvw, vec3(0.0))) ||
+            any(greaterThan(uvw, vec3(1.0))))
+            continue;
+
+        float d = texture(u_texture, uvw).r;
+
+        vec3 c = transferFunction(d);
+        float a = d;
+
+        color += (1.0 - alpha) * a * c;
+        alpha += (1.0 - alpha) * a;
+
+        if (alpha > 0.99)
+            break;
     }
 
-    float transmittance = exp(- thickness);
+    vec3 bg = u_background_color.rgb;
+    vec3 final = mix(bg, color, alpha);
 
-    // Final color
-    vec3 background = u_background_color.rgb;
-
-    vec3 finalColor = background * transmittance;
-
-    // Discard if almost fully transparent
-    if (transmittance > 0.99) {
-        discard;
-    }
-    
-    FragColor = vec4(finalColor, u_color.a);
-
+    FragColor = vec4(final, 1.0);
 }

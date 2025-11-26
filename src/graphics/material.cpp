@@ -389,14 +389,19 @@ MedicalMaterial::MedicalMaterial(glm::vec4 color)
 }
 MedicalMaterial::~MedicalMaterial() { }
 
-void MedicalMaterial::setUniforms(Camera* camera, glm::mat4 model)
+void MedicalMaterial::setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model)
 {
 	// Upload node uniforms
 	this->shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
 	this->shader->setUniform("u_camera_position", camera->eye);
 	this->shader->setUniform("u_model", model);
+	this->shader->setUniform("u_box_min", mesh->aabb_min);
+	this->shader->setUniform("u_box_max", mesh->aabb_max);
+	this->shader->setUniform("u_step_length", this->step_length);
+	this->shader->setUniform("u_background_color", Application::instance->background_color);
 
 	this->shader->setUniform("u_color", this->color);
+	this->shader->setUniform("u_cutoff", this->cutoff);
 
 	// Set texture only if it exists
 	if (this->texture) {
@@ -411,7 +416,7 @@ void MedicalMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
 		this->shader->enable();
 
 		// Upload uniforms
-		setUniforms(camera, model);
+		setUniforms(mesh, camera, model);
 
 		// Do the draw call
 		mesh->render(GL_TRIANGLES);
@@ -423,6 +428,8 @@ void MedicalMaterial::render(Mesh* mesh, glm::mat4 model, Camera* camera)
 void MedicalMaterial::renderInMenu()
 {
 	ImGui::Text("Material Type: %s", std::string("Medical Volume").c_str());
+	ImGui::DragFloat4("Cutoff", (float*)&this->cutoff, 0.01f, -1.f, 1.f);
+	ImGui::SliderFloat("Step Length", &this->step_length, 0.001f, 0.500f);
 
 	ImGui::ColorEdit3("Color", (float*)&this->color);
 }

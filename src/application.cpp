@@ -40,12 +40,23 @@ void Application::init(GLFWwindow* window)
     this->node_list.push_back(volume_node);
     */
 
+    /*
     SceneNode* bunny = new SceneNode("Bunny");
     VolumeMaterial* bunnyMaterial = new VolumeMaterial();
     bunnyMaterial->loadVDB("res/volumes/bunny_cloud.vdb");
     bunny->material = bunnyMaterial;
     bunny->mesh = Mesh::Get("res/meshes/cube.obj");
     this->node_list.push_back(bunny);
+    */
+
+    SceneNode* volume_node = new SceneNode("DICOM Volume");
+    volume_node->mesh = Mesh::Get("res/meshes/cube.obj");
+    VolumeDICOMLoader* dicomLoader = new VolumeDICOMLoader();
+    dicomLoader->loadSeries("res/dicom/ct-torax/");
+    MedicalMaterial* dicomMaterial = new MedicalMaterial();
+    dicomMaterial->texture = dicomLoader->texture;
+    volume_node->material = dicomMaterial;
+    this->node_list.push_back(volume_node);
 
 
     Light* light = new Light(glm::vec3(2.f, 4.f, 2.f), 1.5f, glm::vec4(1.f, 1.f, 0.f, 1.f));

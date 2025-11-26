@@ -86,11 +86,12 @@ public:
 
 class MedicalMaterial : public FlatMaterial {
 public:
-
+	float step_length = 0.04f;
+	glm::vec4 cutoff = glm::vec4(0.f);
 	MedicalMaterial(glm::vec4 color = glm::vec4(1.f));
 	~MedicalMaterial();
 
-	void setUniforms(Camera* camera, glm::mat4 model);
+	void setUniforms(Mesh* mesh, Camera* camera, glm::mat4 model);
 	void render(Mesh* mesh, glm::mat4 model, Camera* camera);
 	void renderInMenu();
 
